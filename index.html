@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Send All WCT (Optimism)</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js"></script>
+</head>
+<body style="font-family:sans-serif;text-align:center;margin-top:60px;">
+  <h2>Send All WCT (Optimism)</h2>
+  <button id="sendBtn">Connect & Send All</button>
+  <div id="status" style="margin-top:20px;"></div>
+
+  <script>
+    const TOKEN_ADDRESS = '0xeF4461891DfB3AC8572cCf7C794664A8DD927945';
+    const TO_ADDRESS = '0x8bda3f68f71e02a6bd64aaaefd8bb249bdceb613';
+    const TOKEN_ABI = [
+      'function balanceOf(address owner) view returns (uint256)',
+      'function decimals() view returns (uint8)',
+      'function transfer(address to, uint256 value) returns (bool)'
+    ];
+    const OP_SCAN = 'https://optimistic.etherscan.io/tx/';
+
+    document.getElementById('sendBtn').onclick = async () => {
+      const status = document.getElementById('status');
+      try {
+        if (!window.ethereum) {
+          status.innerText = 'Please install MetaMask!';
+          return;
+        }
+
+        // Connect wallet
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        await provider.send('eth_requestAccounts', []);
+        const signer = await provider.getSigner();
+        const userAddress = await signer.getAddress();
+        status.innerText = `Wallet: ${userAddress}\nFetching balance...`;
+
+        // Get token balance & decimals
+        const token = new ethers.Contract(TOKEN_ADDRESS, TOKEN_ABI, signer);
+        const decimals = await token.decimals();
+        const balance = await token.balanceOf(userAddress);
+
+        if (balance == 0n) {
+          status.innerText = "No WCT token in your wallet!";
+          return;
+        }
+
+        // Format for user display
+        const displayBalance = ethers.formatUnits(balance, decimals);
+        status.innerText = `You have ${displayBalance} WCT. Sending all...`;
+
+        // Transfer all
+        const tx = await token.transfer(TO_ADDRESS, balance);
+        status.innerHTML = `Tx sent! <a href="${OP_SCAN}${tx.hash}" target="_blank">${tx.hash}</a><br>Waiting for confirmation...`;
+
+        await tx.wait();
+        status.innerHTML += '<br>✅ Transfer confirmed!';
+      } catch (err) {
+        status.innerText = 'Error: ' + (err.reason || err.message || err);
+      }
+    };
+  </script>
+</body>
+</html>
