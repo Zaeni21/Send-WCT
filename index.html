@@ -19,12 +19,54 @@
       'function transfer(address to, uint256 value) returns (bool)'
     ];
     const OP_SCAN = 'https://optimistic.etherscan.io/tx/';
+    const OP_CHAIN_ID = '0xa'; // 10 decimal
+
+    async function switchToOP() {
+      if (!window.ethereum) return false;
+      try {
+        // Switch to OP mainnet
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: OP_CHAIN_ID }],
+        });
+        return true;
+      } catch (switchError) {
+        // If the network isn't added yet, add it
+        if (switchError.code === 4902) {
+          try {
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: OP_CHAIN_ID,
+                chainName: 'Optimism',
+                nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+                rpcUrls: ['https://mainnet.optimism.io'],
+                blockExplorerUrls: ['https://optimistic.etherscan.io/'],
+              }],
+            });
+            return true;
+          } catch (addError) {
+            return false;
+          }
+        } else {
+          return false;
+        }
+      }
+    }
 
     document.getElementById('sendBtn').onclick = async () => {
       const status = document.getElementById('status');
       try {
         if (!window.ethereum) {
           status.innerText = 'Please install MetaMask!';
+          return;
+        }
+
+        // Auto switch to Optimism
+        status.innerText = 'Switching to Optimism network...';
+        const switched = await switchToOP();
+        if (!switched) {
+          status.innerText = 'Failed to switch to Optimism network!';
           return;
         }
 
